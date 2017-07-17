@@ -2,42 +2,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int nums [6] = {1, 2, 3, 4, 5, 6};
-
-void foo(int *arr, int a, int b)
+/** Stores the information needed to resume generating combinations. */
+typedef struct
 {
-    for(int i = 0; i < 6; i++)
-        printf("%d ", nums[i]);
-    printf("\n");
+    int n, k; // n choose k
+    int d; // depth in the stack
+    int *stack; // stores the number of elements on the right that we are
+                // currently allowed to select.
+                // this is always (non-strictly) decreasing
+} comb_state;
 
-    if(a == 0)
-        return;
-    for(int i = 0; i < b; i++)
-    {
-        int temp = arr[0];
-        arr[0] = arr[a+i];
-        arr[a+i] = temp;
-        foo(arr+1, a-1, i+1);
-    }
-}
-
-void foo2(int *arr, int a, int b, int d)
-{
-    for(int i = 0; i < 6; i++)
-        printf("%d ", arr[i]);
-    printf("\n");
-
-    if(a == d)
-        return;
-    for(int i = 0; i < b; i++)
-    {
-        int temp = arr[d];
-        arr[d] = arr[a+i];
-        arr[a+i] = temp;
-        foo2(arr, a, i+1, d+1);
-    }
-}
-
+/** Swaps two elements of an array */
 void swap(int *arr, int i, int j)
 {
     int temp = arr[i];
@@ -45,76 +20,53 @@ void swap(int *arr, int i, int j)
     arr[j] = temp;
 }
 
-void bar(int *arr, int a, int b)
+/** Initializes a comb_state for choosing k elements out of n. */
+void init_state(comb_state *cs, int n, int k)
 {
-    int stack [b];
-    for(int i = 0; i < b; i++)
-        stack[i] = 0;
-    stack[0] = b;
-
-    int d = 0;
-
-    while(1) {
-        for(int i = 0; i < 6; i++)
-            printf("%d ", arr[i]);
-        printf("\n");
-
-        if (d == -1)
-            return;
-
-        if(a == d)
-            d--;
-
-        int i = stack[d+1];
-
-        if(i < stack[d])
-        {
-            swap(arr, d, a + i);
-            stack[d+1]++;
-            stack[d+2] = 0;
-            d++;
-        }
-        else
-        {
-            d--;
-        }
-    }
+    cs->n = n;
+    cs->k = k;
+    cs->d = 0;
+    cs->stack = calloc(k+1, sizeof(int));
+    cs->stack[0] = n-k;
 }
 
-void bar2(int *arr, int n, int k)
+/** Generates the next combination. Returns 1 on success, 0 when exhausted. */
+int next_comb(comb_state *cs, int *arr)
 {
-    int stack [k+1];
-    for(int i = 0; i < k+1; i++)
-        stack[i] = 0;
-    stack[0] = n-k;
+    // This is a transformation of the following recursive algorithm:
+    // void gen_combs(int *arr, int k, int n, int d)
+    // {
+    //     if(k == d)
+    //         return;
+    //     for(int i = 0; i < n-k; i++)
+    //     {
+    //         swap(arr, d, k+i)
+    //         gen_combs(arr, k, k+i+1, d+1)
+    //     }
+    // }
 
-    int d = 0;
+    // Base case (bottoming out the stack)
+    if(cs->k == cs->d)
+        cs->d--;
 
-    while(1) {
-        for(int i = 0; i < k; i++)
-            printf("%d ", arr[i]);
-        printf("| ");
-        for(int i = 0; i < n-k; i++)
-            printf("%d ", arr[k+i]);
-        printf("\n");
-
-        if(k == d)
-            d--;
-
-        while(stack[d+1] == stack[d])
-        {
-            d--;
-            if(d == -1)
-                return;
-        }
-
-        int i = stack[d+1];
-
-        swap(arr, d, k + i);
-        stack[d+1]++;
-        stack[d+2] = 0;
-        d++;
+    // Corresponds to the unwinding of the for loops
+    while(cs->stack[cs->d + 1] == cs->stack[cs->d])
+    {
+        if(cs->d == 0)
+            return 0;
+        cs->d--;
     }
+
+    // Edits the array, giving a new combination
+    int i = cs->stack[cs->d + 1];
+    swap(arr, cs->d, cs->k + i);
+
+    // Corresponds to the recursive call
+    cs->stack[cs->d + 1]++;
+    cs->stack[cs->d + 2] = 0;
+    cs->d++;
+
+    return 1;
 }
 
 /** Tests if the die has the correct average */
@@ -129,6 +81,30 @@ int sum_test(int *nums, int m, int expected)
 
 int main()
 {
-    //foo2(nums, 3, 3, 0);
-    bar2(nums, 6, 3);
+    int n = 6;
+    int k = 3;
+
+    int nums [6] = {1, 2, 3, 4, 5, 6};
+    comb_state cs;
+    init_state(&cs, 6, 3);
+
+    do {
+
+        printf("CS: d=%d, stack=[", cs.d);
+        for(int i = 0; i < k+1; i++)
+            printf("%d ", cs.stack[i]);
+        printf("\b] \n");
+
+        for(int i = 0; i < k; i++)
+            printf("%d ", nums[i]);
+        printf("| ");
+        for(int i = 0; i < n-k; i++)
+            printf("%d ", nums[k+i]);
+        printf("\n");
+    } while(next_comb(&cs, nums));
+
+    printf("CS: d=%d, stack=[", cs.d);
+    for(int i = 0; i < k+1; i++)
+        printf("%d ", cs.stack[i]);
+    printf("\b] \n");
 }
