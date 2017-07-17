@@ -84,21 +84,24 @@ int sum_test(int *nums, int m, int expected)
 
     return total == expected;
 }
-
+int ktr = 0;
 void foo_helper(int *nums, int num_dice, int num_sides, int expected, int d)
 {
-    // Are we on the final die?
+    // Are we on the final die? Then we don't have a choice.
+    // Fortunately, if all the other sum-tests worked out, ours must also
+    // be correct.
     if(d == num_dice - 1)
     {
-        for(int i = 0; i < num_dice; i++)
-        {
-            for(int j = 0; j < num_sides; j++)
-            {
-                printf("%d ", nums[i * num_sides + j]);
-            }
-            printf("| ");
-        }
-        printf("\n");
+        // for(int i = 0; i < num_dice; i++)
+        // {
+        //     for(int j = 0; j < num_sides; j++)
+        //     {
+        //         printf("%d ", nums[i * num_sides + j]);
+        //     }
+        //     printf("| ");
+        // }
+        // printf("\n");
+        ktr++;
         return;
     }
 
@@ -107,25 +110,40 @@ void foo_helper(int *nums, int num_dice, int num_sides, int expected, int d)
     int num_rest = (num_dice - d) * num_sides;
 
     // Copy the state of the array
-    int *save = malloc(num_rest * sizeof(int));
+    int save [num_rest];
     memcpy(save, rest, num_rest * sizeof(int));
 
+    // Find the minimum element
+    int min_idx = 0;
+    for(int i = 0; i < num_rest; i++)
+    {
+        if(rest[i] < rest[min_idx])
+        {
+            min_idx = i;
+        }
+    }
+
+    // Force the min elt to be part of our die.
+    // This prevents us from generating duplicate arrangements of dice.
+    swap(rest, 0, min_idx);
+
     // Start generating dice!
+    // Note that we're only choosing num_sides - 1 sides, because we're
+    // forcing ourselves to pick the minimum element.
     comb_state cs;
-    init_state(&cs, num_rest, num_sides);
+    init_state(&cs, num_rest-1, num_sides-1);
 
     do {
         if(sum_test(rest, num_sides, expected))
         {
             foo_helper(nums, num_dice, num_sides, expected, d+1);
         }
-    } while(next_comb(&cs, rest));
+    } while(next_comb(&cs, rest+1));
 
     free_state(&cs);
 
     // Restore the state of the array
     memcpy(rest, save, num_rest * sizeof(int));
-    free(save);
 }
 
 void foo(int num_dice, int num_sides)
@@ -150,5 +168,6 @@ void foo(int num_dice, int num_sides)
 
 int main()
 {
-    foo(3, 3);
+    foo(5, 5);
+    printf("%d\n", ktr);
 }
