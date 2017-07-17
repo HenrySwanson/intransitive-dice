@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /** Stores the information needed to resume generating combinations. */
 typedef struct
@@ -26,7 +27,7 @@ void init_state(comb_state *cs, int n, int k)
     cs->n = n;
     cs->k = k;
     cs->d = 0;
-    cs->stack = calloc(k+1, sizeof(int));
+    cs->stack = calloc(k+2, sizeof(int));
     cs->stack[0] = n-k;
 }
 
@@ -69,6 +70,11 @@ int next_comb(comb_state *cs, int *arr)
     return 1;
 }
 
+void free_state(comb_state *cs)
+{
+    free(cs->stack);
+}
+
 /** Tests if the die has the correct average */
 int sum_test(int *nums, int m, int expected)
 {
@@ -79,32 +85,70 @@ int sum_test(int *nums, int m, int expected)
     return total == expected;
 }
 
-int main()
+void foo_helper(int *nums, int num_dice, int num_sides, int expected, int d)
 {
-    int n = 6;
-    int k = 3;
+    // Are we on the final die?
+    if(d == num_dice - 1)
+    {
+        for(int i = 0; i < num_dice; i++)
+        {
+            for(int j = 0; j < num_sides; j++)
+            {
+                printf("%d ", nums[i * num_sides + j]);
+            }
+            printf("| ");
+        }
+        printf("\n");
+        return;
+    }
 
-    int nums [6] = {1, 2, 3, 4, 5, 6};
+    // Find the point where we left off
+    int *rest = nums + d * num_sides;
+    int num_rest = (num_dice - d) * num_sides;
+
+    // Copy the state of the array
+    int *save = malloc(num_rest * sizeof(int));
+    memcpy(save, rest, num_rest * sizeof(int));
+
+    // Start generating dice!
     comb_state cs;
-    init_state(&cs, 6, 3);
+    init_state(&cs, num_rest, num_sides);
 
     do {
+        if(sum_test(rest, num_sides, expected))
+        {
+            foo_helper(nums, num_dice, num_sides, expected, d+1);
+        }
+    } while(next_comb(&cs, rest));
 
-        printf("CS: d=%d, stack=[", cs.d);
-        for(int i = 0; i < k+1; i++)
-            printf("%d ", cs.stack[i]);
-        printf("\b] \n");
+    free_state(&cs);
 
-        for(int i = 0; i < k; i++)
-            printf("%d ", nums[i]);
-        printf("| ");
-        for(int i = 0; i < n-k; i++)
-            printf("%d ", nums[k+i]);
-        printf("\n");
-    } while(next_comb(&cs, nums));
+    // Restore the state of the array
+    memcpy(rest, save, num_rest * sizeof(int));
+    free(save);
+}
 
-    printf("CS: d=%d, stack=[", cs.d);
-    for(int i = 0; i < k+1; i++)
-        printf("%d ", cs.stack[i]);
-    printf("\b] \n");
+void foo(int num_dice, int num_sides)
+{
+    int total_sides = num_dice * num_sides;
+
+    int *nums = malloc(total_sides * sizeof(int));
+    for(int i = 0; i < total_sides; i++)
+        nums[i] = i + 1;
+
+    // Compute the expected sum-of-faces on each die
+    int t1 = num_sides * (total_sides + 1);
+    if(t1 & 1) // if expected would be non-integer
+        return;
+    int expected = t1 / 2;
+
+    // Start generating dice!
+    foo_helper(nums, num_dice, num_sides, expected, 0);
+
+    free(nums);
+}
+
+int main()
+{
+    foo(3, 3);
 }
