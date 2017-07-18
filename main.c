@@ -158,10 +158,13 @@ void gd_helper(int *nums, int num_dice, int num_sides, int expected, int d)
     // be correct.
     if(d == num_dice - 1)
     {
+        static int best_score = 0;
+
         int score = intrans_score(nums, num_dice, num_sides);
 
-        if(score * 2 > num_sides * num_sides)
+        if(score > best_score)
         {
+            best_score = score;
             output_die(nums, num_dice, num_sides);
             printf("score: %d\n", score);
         }
@@ -231,5 +234,5 @@ void gen_dice(int num_dice, int num_sides)
 
 int main()
 {
-    gen_dice(5, 3);
+    gen_dice(5, 6);
 }
