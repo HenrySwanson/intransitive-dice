@@ -84,24 +84,87 @@ int sum_test(int *nums, int m, int expected)
 
     return total == expected;
 }
-int ktr = 0;
-void foo_helper(int *nums, int num_dice, int num_sides, int expected, int d)
+
+/** Compares two dice against each other. */
+int compete(int *die1, int *die2, int num_sides)
+{
+    int total = 0;
+
+    for(int i = 0; i < num_sides; i++)
+    {
+        for(int j = 0; j < num_sides; j++)
+        {
+            if(die1[i] > die2[j])
+                total++;
+        }
+    }
+
+    return total;
+}
+
+/** Tests how intransitive the given set of dice are. */
+int intrans_score(int *nums, int num_dice, int num_sides)
+{
+    // Here, we think of it as a game, where Alice picks a die first,
+    // and Bob picks his die in response. The set is intransitive if
+    // Bob can always pick a die to beat Alice.
+
+    int alices_min = num_sides * num_sides;
+    for(int a = 0; a < num_dice; a++)
+    {
+        int bobs_max = 0;
+        for(int b = 0; b < num_dice; b++)
+        {
+            // They can't pick the same die
+            if(a == b)
+                continue;
+
+            // Get dice
+            int *a_die = nums + a * num_sides;
+            int *b_die = nums + b * num_sides;
+
+            // Bob wants to maximize his score
+            int score = compete(b_die, a_die, num_sides);
+            if(score > bobs_max)
+                bobs_max = score;
+        }
+
+        // Alice wants to minimize her score
+        if(bobs_max < alices_min)
+            alices_min = bobs_max;
+    }
+
+    return alices_min;
+}
+
+void output_die(int *nums, int num_dice, int num_sides)
+{
+    printf("|");
+    for(int i = 0; i < num_dice; i++)
+    {
+        for (int j = 0; j < num_sides; j++)
+        {
+            printf(" %d", nums[i * num_sides + j]);
+        }
+        printf(" |");
+    }
+    printf("\n");
+}
+
+void gd_helper(int *nums, int num_dice, int num_sides, int expected, int d)
 {
     // Are we on the final die? Then we don't have a choice.
     // Fortunately, if all the other sum-tests worked out, ours must also
     // be correct.
     if(d == num_dice - 1)
     {
-        // for(int i = 0; i < num_dice; i++)
-        // {
-        //     for(int j = 0; j < num_sides; j++)
-        //     {
-        //         printf("%d ", nums[i * num_sides + j]);
-        //     }
-        //     printf("| ");
-        // }
-        // printf("\n");
-        ktr++;
+        int score = intrans_score(nums, num_dice, num_sides);
+
+        if(score * 2 > num_sides * num_sides)
+        {
+            output_die(nums, num_dice, num_sides);
+            printf("score: %d\n", score);
+        }
         return;
     }
 
@@ -136,7 +199,7 @@ void foo_helper(int *nums, int num_dice, int num_sides, int expected, int d)
     do {
         if(sum_test(rest, num_sides, expected))
         {
-            foo_helper(nums, num_dice, num_sides, expected, d+1);
+            gd_helper(nums, num_dice, num_sides, expected, d+1);
         }
     } while(next_comb(&cs, rest+1));
 
@@ -146,7 +209,7 @@ void foo_helper(int *nums, int num_dice, int num_sides, int expected, int d)
     memcpy(rest, save, num_rest * sizeof(int));
 }
 
-void foo(int num_dice, int num_sides)
+void gen_dice(int num_dice, int num_sides)
 {
     int total_sides = num_dice * num_sides;
 
@@ -161,13 +224,12 @@ void foo(int num_dice, int num_sides)
     int expected = t1 / 2;
 
     // Start generating dice!
-    foo_helper(nums, num_dice, num_sides, expected, 0);
+    gd_helper(nums, num_dice, num_sides, expected, 0);
 
     free(nums);
 }
 
 int main()
 {
-    foo(5, 5);
-    printf("%d\n", ktr);
+    gen_dice(5, 3);
 }
