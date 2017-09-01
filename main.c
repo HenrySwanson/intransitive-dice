@@ -232,7 +232,28 @@ void gen_dice(int num_dice, int num_sides)
     free(nums);
 }
 
-int main()
+int main(int argc, char** argv)
 {
-    gen_dice(5, 6);
+    if(argc != 3)
+    {
+        printf("usage: %s num_dice num_side\n", argv[0]);
+        exit(1);
+    }
+
+    int num_dice = atoi(argv[1]);
+    int num_sides = atoi(argv[2]);
+
+    if(num_dice <= 0)
+    {
+        printf("number of dice must be positive\n");
+        exit(1);
+    }
+
+    if(num_sides <= 0)
+    {
+        printf("number of sides must be positive\n");
+        exit(1);
+    }
+
+    gen_dice(num_dice, num_sides);
 }
